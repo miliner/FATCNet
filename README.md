@@ -1,5 +1,10 @@
 # [FATCNet : Feature Adaptive Transformer and CNN for Infrared Small Target Detection]()
 
+## Installation
+```angular2html
+pip install -r requirement.txt
+```
+
 ## Training
 
 ```
