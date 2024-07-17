@@ -52,7 +52,7 @@ class Conv2dReLU(nn.Sequential):
         super(Conv2dReLU, self).__init__(conv, bn, relu)
 
 
-class DecoderBlock(nn.Module):
+class Hierarchical_Attention_Module(nn.Module):
     def __init__(
             self,
             in_channels,  
@@ -141,7 +141,7 @@ class DecoderCup(nn.Module):
             skip_channels = [0, 0, 0, 0]
 
         blocks = [
-            DecoderBlock(in_ch, out_ch, sk_ch, img_size = img_size) for in_ch, out_ch, sk_ch in zip(in_channels, out_channels, skip_channels)
+            Hierarchical_Attention_Module(in_ch, out_ch, sk_ch, img_size = img_size) for in_ch, out_ch, sk_ch in zip(in_channels, out_channels, skip_channels)
         ]
         self.blocks = nn.ModuleList(blocks)
 
