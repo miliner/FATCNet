@@ -15,7 +15,7 @@ import torch.nn.functional as F
 from networks.LeViT import LeViT_UNet_128s
 # from networks.GAM_attention import simam_module
 # from networks.giraffe_fpn_btn import CSPSMerge, GiraffeNeckV2
-from networks.Attention import SpatialAttention_small, SpatialAttention, se_module, SCSEModule
+from networks.Attention import SpatialAttention, se_module, SCSEModule
 
 
 logger = logging.getLogger(__name__)
