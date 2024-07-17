@@ -38,7 +38,6 @@ class Conv2dReLU(nn.Sequential):
             stride=1,
             use_batchnorm=True,
     ):
-        # 二维卷积网络
         conv = nn.Conv2d(
             in_channels,
             out_channels,
@@ -47,28 +46,24 @@ class Conv2dReLU(nn.Sequential):
             padding=padding,
             bias=not (use_batchnorm),
         )
-        # 激活函数
         relu = nn.ReLU(inplace=True)
-        # 对输入的四维数组进行批量标准化处理
-        # 对于所有的batch中样本的同一个channel的数据元素进行标准化处理，即如果有C个通道，无论batch中有多少个样本，都会在通道维度上进行标准化处理，一共进行C次。
         bn = nn.BatchNorm2d(out_channels)
 
         super(Conv2dReLU, self).__init__(conv, bn, relu)
 
 
-# 解码模块 小模块
 class DecoderBlock(nn.Module):
     def __init__(
             self,
-            in_channels,  # 输入通道
-            out_channels,  # 输出通道
-            skip_channels=0,  # 跳连接通道
+            in_channels,  
+            out_channels,  
+            skip_channels=0,  
             img_size=256,
             use_batchnorm=True,
     ):
         super().__init__()
 
-        # 继承了nn.Sequential 有跳连接的
+
         self.conv1 = Conv2dReLU(
             in_channels + skip_channels,
             out_channels,
@@ -76,7 +71,7 @@ class DecoderBlock(nn.Module):
             padding=1,
             use_batchnorm=use_batchnorm,
         )
-        # 继承了nn.Sequential
+
         self.conv2 = Conv2dReLU(
             out_channels,
             out_channels,
@@ -85,7 +80,6 @@ class DecoderBlock(nn.Module):
             use_batchnorm=use_batchnorm,
         )
 
-        # 对由多个输入通道组成的输入信号应用 2D 双线性上采样。
         self.up = nn.UpsamplingBilinear2d(scale_factor=2)
         self.skip = skip_channels
         if out_channels == 256:
@@ -93,17 +87,12 @@ class DecoderBlock(nn.Module):
         if out_channels == 128:
             self.att = SCSEModule(out_channels)
         if out_channels == 64:
-            # if img_size == 256:
-            # self.att = SpatialAttention_small(img_size=img_size)
-            # else:
             self.att = SpatialAttention(img_size=img_size)
 
     def forward(self, x, skip=None):
 
         x = self.up(x)
         if skip is not None:
-            # torch.cat是拼接x和skip.
-            # x上采样后与encoder中的特征图进行跳跃连接。
             x = torch.cat([x, skip], dim=1)
 
         x = self.conv1(x)
@@ -115,22 +104,16 @@ class DecoderBlock(nn.Module):
         else:
             return x
 
-        # return x
 
-
-# 分割模块
 class SegmentationHead(nn.Sequential):
 
     def __init__(self, in_channels, out_channels, kernel_size=3, upsampling=1):
-        # 二维卷积
         conv2d = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size // 2)
-        # 上采样
         upsampling = nn.UpsamplingBilinear2d(scale_factor=upsampling) if upsampling > 1 else nn.Identity()
 
         super().__init__(conv2d, upsampling)
 
 
-# 解码模块 包含跳连接
 class DecoderCup(nn.Module):
     def __init__(self, config, img_size):
         super().__init__()
@@ -144,14 +127,6 @@ class DecoderCup(nn.Module):
             padding=1,
             use_batchnorm=True,
         )
-
-        # self.conv_more = Conv2dReLU(
-        #     768 + 1024,
-        #     head_channels,
-        #     kernel_size=3,
-        #     padding=1,
-        #     use_batchnorm=True,
-        # )
 
         decoder_channels = config.decoder_channels
         in_channels = [head_channels] + list(decoder_channels[:-1])
@@ -171,20 +146,8 @@ class DecoderCup(nn.Module):
         self.blocks = nn.ModuleList(blocks)
 
     def forward(self, hidden_states, features=None):
-        # B, n_patch, hidden = hidden_states.size()  # reshape from (B, n_patch, hidden) to (B, h, w, hidden)
-        # h, w = int(np.sqrt(n_patch)), int(np.sqrt(n_patch))
-        # x = hidden_states.permute(0, 2, 1)
-        # x = x.contiguous().view(B, hidden, h, w)
 
         x = self.conv_more(hidden_states)
-
-        # x = self.blocks[0](x, skip=features[0])
-        #
-        # x = self.blocks[1](x, skip=features[1])
-        #
-        # x = self.blocks[2](x, skip=features[2])
-        #
-        # x = self.blocks[3](x)
 
         for i, decoder_block in enumerate(self.blocks):
             if features is not None:
@@ -239,7 +202,6 @@ class Embeddings(nn.Module):
 
         x = self.patch_embeddings(x)  # (B, hidden. n_patches^(1/2), n_patches^(1/2))
 
-        # 卷积的tensor展平，之后给
         x = x.flatten(2)
 
         x = x.transpose(-1, -2)  # (B, n_patches, hidden)
@@ -253,7 +215,6 @@ class Embeddings(nn.Module):
 class Transformer(nn.Module):
     def __init__(self, config, img_size, vis):
         super(Transformer, self).__init__()
-        # 位置嵌入
         self.embeddings = Embeddings(config, img_size=img_size)
 
     def forward(self, input_ids):
@@ -276,9 +237,9 @@ def add_conv(in_ch, out_ch, ksize, stride, leaky=True):
     return stage
 
 
-class AttFuse(nn.Module):
+class Attention_Guided_Adaptive_Fusion(nn.Module):
     def __init__(self, rfb=True):
-        super(AttFuse, self).__init__()
+        super(Attention_Guided_Adaptive_Fusion, self).__init__()
 
         compress_c = 16  # 8, 16, 32
 
@@ -327,7 +288,7 @@ class FATCNet(nn.Module):
         # self.resnet = Transformer(config, img_size, vis)
         self.resnet = ResNetV2(block_units=config.resnet.num_layers, width_factor=config.resnet.width_factor)
         self.LeViT = LeViT_UNet_128s(img_size)
-        self.fuse = AttFuse(rfb=True)
+        self.fuse = Attention_Guided_Adaptive_Fusion(rfb=True)
 
         self.decoder = DecoderCup(config, img_size)
 
@@ -341,8 +302,6 @@ class FATCNet(nn.Module):
         self.config = config
 
     def forward(self, x):
-        # [B,C,H,W],当图片为单通道[B,1,H,W]时，将通道数复制三次得到[B,3,H,W]
-        # 给定图像H×W ×C，空间分辨率为H×W，通道数为C
         if x.size()[1] == 1:
             x = x.repeat(1, 3, 1, 1)
 
@@ -351,9 +310,7 @@ class FATCNet(nn.Module):
         x, features = self.resnet(x)
 
         x = self.fuse(x, trans_data2)
-        # x = torch.cat((x, trans_data2), dim=1)
-        # x = torch.add(x, trans_data2)
-
+        
         x = self.decoder(x, features)
 
         logits = self.segmentation_head(x)
@@ -364,45 +321,6 @@ class FATCNet(nn.Module):
         with torch.no_grad():
 
             res_weight = weights
-
-            # self.resnet.embeddings.patch_embeddings.weight.copy_(np2th(weights["embedding/kernel"], conv=True))
-            # self.resnet.embeddings.patch_embeddings.bias.copy_(np2th(weights["embedding/bias"]))
-            #
-            # posemb = np2th(weights["Transformer/posembed_input/pos_embedding"])
-            #
-            # posemb_new = self.resnet.embeddings.position_embeddings
-            # if posemb.size() == posemb_new.size():
-            #     self.resnet.embeddings.position_embeddings.copy_(posemb)
-            # elif posemb.size()[1] - 1 == posemb_new.size()[1]:
-            #     posemb = posemb[:, 1:]
-            #     self.resnet.embeddings.position_embeddings.copy_(posemb)
-            # else:
-            #     logger.info("load_pretrained: resized variant: %s to %s" % (posemb.size(), posemb_new.size()))
-            #     ntok_new = posemb_new.size(1)
-            #     if self.classifier == "seg":
-            #         _, posemb_grid = posemb[:, :1], posemb[0, 1:]
-            #     gs_old = int(np.sqrt(len(posemb_grid)))
-            #     gs_new = int(np.sqrt(ntok_new))
-            #     print('load_pretrained: grid-size from %s to %s' % (gs_old, gs_new))
-            #     posemb_grid = posemb_grid.reshape(gs_old, gs_old, -1)
-            #     zoom = (gs_new / gs_old, gs_new / gs_old, 1)
-            #     posemb_grid = ndimage.zoom(posemb_grid, zoom, order=1)  # th2np
-            #     posemb_grid = posemb_grid.reshape(1, gs_new * gs_new, -1)
-            #     posemb = posemb_grid
-            #     self.resnet.embeddings.position_embeddings.copy_(np2th(posemb))
-            #
-            # if self.resnet.embeddings.hybrid:
-            #     self.resnet.embeddings.hybrid_model.root.conv.weight.copy_(
-            #         np2th(res_weight["conv_root/kernel"], conv=True))
-            #     gn_weight = np2th(res_weight["gn_root/scale"]).view(-1)
-            #     gn_bias = np2th(res_weight["gn_root/bias"]).view(-1)
-            #     self.resnet.embeddings.hybrid_model.root.gn.weight.copy_(gn_weight)
-            #     self.resnet.embeddings.hybrid_model.root.gn.bias.copy_(gn_bias)
-            #
-            #     for bname, block in self.resnet.embeddings.hybrid_model.body.named_children():
-            #         for uname, unit in block.named_children():
-            #             unit.load_from(res_weight, n_block=bname, n_unit=uname)
-
             # END
             self.resnet.root.conv.weight.copy_(
                 np2th(res_weight["conv_root/kernel"], conv=True))
