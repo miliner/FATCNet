@@ -34,7 +34,6 @@ def conv1x1(cin, cout, stride=1, bias=False):
                      padding=0, bias=bias)
 
 
-# 跳连接模块
 class PreActBottleneck(nn.Module):
     """Pre-activation (v2) bottleneck block.
     """
@@ -126,7 +125,6 @@ class ResNetV2(nn.Module):
         width = int(64 * width_factor)
         self.width = width
 
-        # 网络模型列表
         self.root = nn.Sequential(OrderedDict([
             ('conv', StdConv2d(3, width, kernel_size=7, stride=2, bias=False, padding=3)),
             ('gn', nn.GroupNorm(32, width, eps=1e-6)),
@@ -134,16 +132,6 @@ class ResNetV2(nn.Module):
             # ('pool', nn.MaxPool2d(kernel_size=3, stride=2, padding=0))
         ]))
 
-
-        #body部分产生了3个block，用于与decoder对应大小进行跳跃连接。
-
-        ''' 
-        输入 56*56*64
-        block1 56*56*256
-        block2 28*28*512
-        blcok3 14*14*1024
-        
-        '''
 
         self.body = nn.Sequential(OrderedDict([
             ('block1/', nn.Sequential(OrderedDict(
