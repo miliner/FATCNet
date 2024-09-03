@@ -201,9 +201,6 @@ class Attention_Guided_Adaptive_Fusion(nn.Module):
         levels_weight = self.weight_levels(levels_weight_v)
         levels_weight = F.softmax(levels_weight, dim=1)
 
-        # fused_out_reduced = (level_0_resized + level_0_resized * levels_weight[:,0:1,:,:]) + \
-        #                     (level_1_resized + level_1_resized * levels_weight[:,1:2,:,:])
-
         fused_out_reduced = level_0_resized * levels_weight[:, 0:1, :, :] + \
                             level_1_resized * levels_weight[:, 1:2, :, :]
 
