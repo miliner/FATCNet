@@ -59,8 +59,8 @@ if __name__ == "__main__":
     dataset_name = args.dataset
     dataset_config = {
         'Synapse': {
-            'root_path': '/home/yj/train_data/train/T2end_npz',
-            'list_dir': '/home/yj/train_data/list/T2end',
+            'root_path': '/home/yj/train_data/AA/NUAA_npz',
+            'list_dir': '/home/yj/train_data/AA',
             'num_classes': 2,
         },
     }
